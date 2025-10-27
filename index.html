@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aditya Sejwal - Data Analyst Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display-swap">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -384,6 +384,11 @@
             let isDeleting = false;
 
             function type() {
+                // Check if typingText element exists
+                if (!typingText) {
+                    console.error("Typing text element not found.");
+                    return;
+                }
                 const currentRole = roles[roleIndex];
                 if (isDeleting) {
                     typingText.textContent = currentRole.substring(0, charIndex - 1);
@@ -402,73 +407,602 @@
                 const typeSpeed = isDeleting ? 75 : 150;
                 setTimeout(type, typeSpeed);
             }
-            setTimeout(type, 1000);
+            // Only start if the element exists
+            if (typingText) {
+                setTimeout(type, 1000);
+            }
+
 
             // --- 2. Cursor Light Effect ---
             const cursorLight = document.getElementById('cursor-light');
-            window.addEventListener('mousemove', (e) => {
-                cursorLight.style.left = `${e.clientX}px`;
-                cursorLight.style.top = `${e.clientY}px`;
-            });
+            if (cursorLight) { // Check if element exists
+                window.addEventListener('mousemove', (e) => {
+                    cursorLight.style.left = `${e.clientX}px`;
+                    cursorLight.style.top = `${e.clientY}px`;
+                });
+            } else {
+                console.error("Cursor light element not found.");
+            }
+
 
             // --- 3. Scroll Fade-in & Stagger Effect ---
             const sections = document.querySelectorAll('.fade-in-section');
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                        // Apply stagger delay if children have data-delay
-                        entry.target.querySelectorAll('.fade-in-section[data-delay]').forEach((child, index) => {
-                            const delay = child.getAttribute('data-delay') || (index * 100);
-                            child.style.transitionDelay = `${delay}ms`;
-                        });
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.1 });
-
-            sections.forEach(section => {
-                observer.observe(section);
-                // Observe children with data-delay directly for staggering
-                section.querySelectorAll('.fade-in-section[data-delay]').forEach(child => {
-                    observer.observe(child);
-                });
-            });
-            
-            // --- 4. Active Nav "Scroll Spy" ---
-            const navLinks = document.querySelectorAll('.nav-link');
-            const navMap = new Map();
-            navLinks.forEach(link => {
-                const section = document.querySelector(link.getAttribute('href'));
-                if (section) { // Add check to ensure section exists
-                    navMap.set(section, link);
-                }
-            });
-
-            const scrollSpyObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    const link = navMap.get(entry.target);
-                    // ***FIX IS HERE***: Check if 'link' is defined before using it
-                    if (link) { 
-                        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                            navLinks.forEach(l => l.classList.remove('active'));
-                            link.classList.add('active');
-                        } else if (!entry.isIntersecting) {
-                            link.classList.remove('active');
+            if (sections.length > 0) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            // Apply stagger delay if children have data-delay
+                            entry.target.querySelectorAll('.fade-in-section[data-delay]').forEach((child, index) => {
+                                const delay = child.getAttribute('data-delay') || (index * 100);
+                                child.style.transitionDelay = `${delay}ms`;
+                            });
+                            observer.unobserve(entry.target);
                         }
+                    });
+                }, { threshold: 0.1 });
+
+                sections.forEach(section => {
+                    observer.observe(section);
+                    // Observe children with data-delay directly for staggering
+                    section.querySelectorAll('.fade-in-section[data-delay]').forEach(child => {
+                        observer.observe(child);
+                    });
+                });
+            } else {
+                console.warn("No fade-in sections found.");
+            }
+
+            
+            // --- 4. Active Nav "Scroll Spy" (with fix) ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            if (navLinks.length > 0) {
+                const navMap = new Map();
+                navLinks.forEach(link => {
+                    const section = document.querySelector(link.getAttribute('href'));
+                    if (section) { // Add check to ensure section exists
+                        navMap.set(section, link);
+                    } else {
+                        console.warn(`Scroll spy target not found for link: ${link.getAttribute('href')}`);
                     }
                 });
-            }, { 
-                threshold: 0.5, // 50% of the section must be visible
-                rootMargin: "-50% 0px -50% 0px" // Only trigger for element in middle of screen
-            });
 
-            document.querySelectorAll('main section[id]').forEach(section => {
-                // Observe only if this section is in our navMap
-                if (navMap.has(section)) {
-                    scrollSpyObserver.observe(section);
+                if (navMap.size > 0) {
+                    const scrollSpyObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            const link = navMap.get(entry.target);
+                            if (link) { 
+                                if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                                    navLinks.forEach(l => l.classList.remove('active'));
+                                    link.classList.add('active');
+                                } else if (!entry.isIntersecting) {
+                                    link.classList.remove('active');
+                                }
+                            }
+                        });
+                    }, { 
+                        threshold: 0.5, // 50% of the section must be visible
+                        rootMargin: "-50% 0px -50% 0px" // Only trigger for element in middle of screen
+                    });
+
+                    // ***THIS IS THE FIX from last time***
+                    // Instead of querying all sections, just observe the ones we have links for.
+                    navLinks.forEach(link => {
+                        const section = document.querySelector(link.getAttribute('href'));
+                        if (section) {
+                            scrollSpyObserver.observe(section);
+                        }
+                    });
                 }
-            });
+            } else {
+                console.warn("No nav links found for scroll spy.");
+            }
+
+        });
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aditya Sejwal - Data Analyst Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display-swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712; /* Deep, dark navy */
+            color: #94a3b8; /* Lighter gray text */
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+        
+        /* --- Animated Aurora Background --- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 10% 20%, rgba(52, 211, 153, 0.1), transparent 30%),
+                        radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.1), transparent 30%);
+            animation: moveAurora 20s infinite alternate ease-in-out;
+        }
+
+        @keyframes moveAurora {
+            0% {
+                transform: scale(1) translate(0px, 0px);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(1.5) translate(50px, -50px);
+                opacity: 1;
+            }
+        }
+
+        /* --- Interactive Cursor Light --- */
+        #cursor-light {
+            position: fixed;
+            width: 400px; /* Size of the light circle */
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(52, 211, 153, 0.08) 0%, transparent 70%);
+            pointer-events: none; /* Allows clicking through it */
+            transform: translate(-50%, -50%);
+            z-index: -1; /* Behind content, in front of bg */
+            transition: all 0.1s linear;
+        }
+
+        /* --- Glassmorphism Card --- */
+        .card {
+            background-color: rgba(30, 41, 59, 0.5); /* Semi-transparent slate */
+            backdrop-filter: blur(10px); /* The "frosted glass" effect */
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(52, 211, 153, 0.4);
+            box-shadow: 0 0 30px rgba(52, 211, 153, 0.1);
+        }
+        
+        /* --- Scroll Animations --- */
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* --- Gradient Text --- */
+        .gradient-text {
+            background: linear-gradient(to right, #34d399, #6ee7b7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .btn-primary {
+             background: linear-gradient(to right, #34d399, #2dd4bf);
+             color: #030712;
+             font-weight: 500;
+             transition: all 0.3s ease;
+             box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(52, 211, 153, 0.5);
+        }
+        
+        .tag {
+            background-color: #334155;
+            color: #94a3b8;
+            transition: all 0.3s ease;
+        }
+        .card:hover .tag {
+            background-color: #475569;
+        }
+
+        /* --- Active Nav Link --- */
+        .nav-link.active .nav-text {
+            color: #ffffff;
+            font-weight: 500;
+        }
+        .nav-link.active .nav-indicator {
+            width: 4rem; /* 64px */
+            background-color: #34d399;
+        }
+
+        /* --- Custom Scrollbar --- */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #334155;
+            border-radius: 20px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #475569;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Cursor Light Element -->
+    <div id="cursor-light"></div>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="md:flex md:gap-12">
+            
+            <!-- ====== LEFT SIDEBAR (HEADER) ====== -->
+            <header class="md:sticky md:top-0 md:flex md:flex-col md:justify-between md:w-1/3 md:h-screen md:py-12 lg:py-24">
+                <div>
+                    <h1 class="text-4xl sm:text-5xl font-extrabold text-white">Aditya Sejwal</h1>
+                    <h2 class="mt-3 text-lg sm:text-xl font-medium">
+                        <span id="typing-text" class="gradient-text"></span>
+                        <span class="typing-cursor"></span>
+                    </h2>
+                    <p class="mt-4 max-w-xs text-base">
+                        Data Analyst with a strong foundation in SQL, Excel, and data visualization.
+                    </p>
+                    
+                    <!-- Navigation -->
+                    <nav class="hidden md:block mt-12">
+                        <ul class="space-y-4" id="nav-links">
+                            <li data-section="experience"><a href="#experience" class="nav-link group flex items-center gap-2 text-gray-400 hover:text-white transition-all">
+                                <span class="nav-indicator h-px w-8 bg-gray-600 group-hover:w-16 group-hover:bg-green-400 transition-all"></span>
+                                <span class="nav-text text-xs font-semibold uppercase tracking-widest">Experience</span>
+                            </a></li>
+                            <li data-section="projects"><a href="#projects" class="nav-link group flex items-center gap-2 text-gray-400 hover:text-white transition-all">
+                                <span class="nav-indicator h-px w-8 bg-gray-600 group-hover:w-16 group-hover:bg-green-400 transition-all"></span>
+                                <span class="nav-text text-xs font-semibold uppercase tracking-widest">Projects</span>
+                            </a></li>
+                            <li data-section="certifications"><a href="#certifications" class="nav-link group flex items-center gap-2 text-gray-400 hover:text-white transition-all">
+                                <span class="nav-indicator h-px w-8 bg-gray-600 group-hover:w-16 group-hover:bg-green-400 transition-all"></span>
+                                <span class="nav-text text-xs font-semibold uppercase tracking-widest">Certifications</span>
+                            </a></li>
+                        </ul>
+                    </nav>
+                </div>
+
+                <!-- Social Links -->
+                <div class="mt-8 md:mt-0 flex gap-4">
+                    <a href="https://github.com/Sejwal007" target="_blank" title="GitHub" class="text-gray-400 hover:text-white transition-all transform hover:scale-110">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.165 6.839 9.49.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.026 2.747-1.026.546 1.379.202 2.398.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd" /></svg>
+                    </a>
+                    <a href="https://www.linkedin.com/in/aditya-sejwal-1a1402185/" target="_blank" title="LinkedIn" class="text-gray-400 hover:text-white transition-all transform hover:scale-110">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                    </a>
+                    <a href="https://www.hackerrank.com/profile/Aditya_Sejwal" target="_blank" title="HackerRank" class="text-gray-400 hover:text-white transition-all transform hover:scale-110">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.82 20.84H9.55V12H7.25v8.84H3.97V3.16h3.28v6.1h2.3V3.16h3.28v17.68M17.7 12c0-1.63.4-3.05 1.2-4.24.8-1.2 1.9-1.78 3.32-1.78.7 0 1.3.1 1.8.3s.9.4 1.2.7l-1 2.62c-.3-.2-.5-.3-.8-.4s-.6-.1-1-.1c-.7 0-1.3.2-1.7.7s-.6 1.1-.6 1.9v.3h2.6v2.8h-2.6v7.35h-3.3V12z"/></svg>
+                    </a>
+                </div>
+            </header>
+
+            <!-- ====== RIGHT MAIN CONTENT ====== -->
+            <main class="md:w-2/3 md:py-12 lg:py-24">
+                
+                <!-- Introduction Text (visible on mobile, hidden on desktop) -->
+                <section class="md:hidden mt-8 mb-12">
+                     <p class="text-base">
+                        Data Analyst with a strong foundation in SQL, Excel, and data visualization. Experienced in building end-to-end analysis projects—from querying data to creating dashboards and providing strategic recommendations. Passionate about using data to uncover trends and inform business strategy.
+                    </p>
+                </section>
+                
+                <!-- Skills Section -->
+                <section id="skills" class="fade-in-section">
+                    <h2 class="text-xl font-bold uppercase tracking-widest text-white">Skills</h2>
+                    <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <!-- SQL -->
+                        <div class="card p-4 rounded-lg text-center flex flex-col items-center justify-center h-28">
+                            <svg class="w-8 h-8 mb-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4M4 7s8 4 8 4 8-4 8-4"></path></svg>
+                            <h3 class="font-semibold text-white">SQL</h3>
+                        </div>
+                        <!-- Advanced Excel -->
+                        <div class="card p-4 rounded-lg text-center flex flex-col items-center justify-center h-28">
+                            <svg class="w-8 h-8 mb-2 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 21h17.25c1.035 0 1.875-.84 1.875-1.875V4.875c0-1.035-.84-1.875-1.875-1.875H3.375c-1.035 0-1.875.84-1.875 1.875v14.25c0 1.035.84 1.875 1.875 1.875z" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 8.25h3m-3 3.75h3m-3 3.75h3M7.5 8.25h.008v.008H7.5V8.25zm.008 3.75h-.008v.008h.008v-.008zm0 3.75h-.008v.008h.008v-.008z" /></svg>
+                            <h3 class="font-semibold text-white">Advanced Excel</h3>
+                        </div>
+                        <!-- Power BI -->
+                        <div class="card p-4 rounded-lg text-center flex flex-col items-center justify-center h-28">
+                            <svg class="w-8 h-8 mb-2 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v18h16.5V3H3.75zM9 9h6v6H9V9z" /><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 7.5h.008v.008H16.5V7.5zm.008 3h-.008v.008h.008V10.5zm0 3h-.008v.008h.008V13.5zm0 3h-.008v.008h.008V16.5zM7.5 7.5h.008v.008H7.5V7.5zm.008 3h-.008v.008h.008V10.5zm0 3h-.008v.008h.008V13.5zm0 3h-.008v.008h.008V16.5z" /></svg>
+                            <h3 class="font-semibold text-white">Power BI</h3>
+                        </div>
+                        <!-- Python -->
+                        <div class="card p-4 rounded-lg text-center flex flex-col items-center justify-center h-28">
+                            <svg class="w-8 h-8 mb-2 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" /></svg>
+                            <h3 class="font-semibold text-white">Python</h3>
+                            <p class="text-xs text-gray-400">(NumPy, Matplotlib)</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Work Experience Section -->
+                <section id="experience" class="mt-16 fade-in-section">
+                    <h2 class="text-xl font-bold uppercase tracking-widest text-white">Experience</h2>
+                    <div class="mt-6 p-6 rounded-lg card">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-start">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white">Global Operations AI Associate</h3>
+                                <p class="mt-1">Amazon</p>
+                            </div>
+                            <p class="gradient-text mt-2 sm:mt-1 text-sm font-medium whitespace-nowrap">Feb 2024 - May 2024</p>
+                        </div>
+                        <ul class="mt-4 list-disc list-inside text-gray-400 space-y-2">
+                            <li>Processed over 1,300+ video annotations daily to train and maintain fulfillment center AI models.</li>
+                            <li>Maintained a consistent accuracy rate of over 99%, surpassing the stringent 98% team target.</li>
+                            <li>Recognized as a Top Performer and received the Gold Award for outstanding contributions and accuracy.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Additional Experience Section -->
+                <section id="additional-experience" class="mt-16 fade-in-section">
+                    <h2 class="text-xl font-bold uppercase tracking-widest text-white">Additional Experience</h2>
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- AI Freelancer -->
+                        <div class="card rounded-lg p-6 fade-in-section" data-delay="0">
+                            <h3 class="text-lg font-semibold text-white">AI Freelancer</h3>
+                            <p class="mt-1 gradient-text text-sm font-medium">Dec 2023 - Feb 2024</p>
+                            <p class="mt-2 text-gray-400 text-sm">
+                                Improved AI models by comparing and evaluating responses, identifying errors, and providing detailed feedback.
+                            </p>
+                        </div>
+                        <!-- Chegg Expert -->
+                        <div class="card rounded-lg p-6 fade-in-section" data-delay="100">
+                            <h3 class="text-lg font-semibold text-white">Q&A Expert, Chegg Inc.</h3>
+                            <p class="mt-1 gradient-text text-sm font-medium">Nov 2023 - Present</p>
+                            <p class="mt-2 text-gray-400 text-sm">
+                               Resolving global student queries in Mathematics, demonstrating strong analytical and problem-solving skills.
+                            </p>
+                        </div>
+                        <!-- Social Work -->
+                        <div class="card rounded-lg p-6 md:col-span-2 fade-in-section" data-delay="200">
+                            <h3 class="text-lg font-semibold text-white">Community & Volunteer Work</h3>
+                            <p class="mt-1 gradient-text text-sm font-medium">Sep 2023 - Nov 2023</p>
+                            <p class="mt-2 text-gray-400 text-sm">
+                               Volunteered with Kshitiksha Foundation and Hamari Pahchan NGO, spearheading fundraising and executing digital marketing.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Projects Section -->
+                <section id="projects" class="mt-16 fade-in-section">
+                    <h2 class="text-xl font-bold uppercase tracking-widest text-white">Projects</h2>
+                    <div class="mt-8 grid grid-cols-1 gap-12">
+                        
+                        <!-- Project 1: Online Gaming Act -->
+                        <div class="card rounded-lg p-0 flex flex-col md:flex-row overflow-hidden fade-in-section" data-delay="0">
+                            <img class="h-48 w-full md:w-1/3 object-cover opacity-70 group-hover:opacity-100 transition-opacity" src="Resources/cropped%20dashboard%20glimpse.png" alt="Online Gaming Act Project Visual">
+                            <div class="p-6 flex-1">
+                                <h3 class="text-lg font-semibold text-white">Online Gaming Act Impact Analysis</h3>
+                                <p class="mt-2 text-gray-400 text-sm">
+                                    Analyzed the projected impact of the Online Gaming Act 2025. Sourced and structured data, wrote SQL queries to quantify market shock, and developed a comprehensive dashboard in Google Sheets.
+                                </p>
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    <span class="tag text-xs font-semibold inline-block py-1 px-2 rounded-full">SQL</span>
+                                    <span class="tag text-xs font-semibold inline-block py-1 px-2 rounded-full">Google Sheets</span>
+                                    <span class="tag text-xs font-semibold inline-block py-1 px-2 rounded-full">Business Strategy</span>
+                                </div>
+                                <a href="https://github.com/Sejwal007/Online-Gaming-Act-2025---Impact-Analysis" target="_blank" class="inline-block mt-4 text-green-400 font-medium hover:text-green-300 transition-all transform hover:translate-x-1">View on GitHub &rarr;</a>
+                            </div>
+                        </div>
+
+                        <!-- Project 2: Customer Churn -->
+                        <div class="card rounded-lg p-0 flex flex-col md:flex-row overflow-hidden fade-in-section" data-delay="100">
+                            <img class="h-48 w-full md:w-1/3 object-cover opacity-70 group-hover:opacity-100 transition-opacity" src="Resources/Customer%20Churn%20Dashboard.png" alt="Customer Churn Project Dashboard">
+                            <div class="p-6 flex-1">
+                                <h3 class="text-lg font-semibold text-white">Customer Churn Analysis</h3>
+                                <p class="mt-2 text-gray-400 text-sm">
+                                    Analyzed a 6,670-customer dataset to find key drivers for a 26.86% churn rate. Identified 'Seniors' as the highest-risk segment and proposed a data-driven 'Senior Saver' plan.
+                                </p>
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    <span class="tag text-xs font-semibold inline-block py-1 px-2 rounded-full">Advanced Excel</span>
+                                    <span class="tag text-xs font-semibold inline-block py-1 px-2 rounded-full">PivotTables</span>
+                                    <span class="tag text-xs font-semibold inline-block py-1 px-2 rounded-full">Business Acumen</span>
+                                </div>
+                                <a href="https://github.com/Sejwal007/Customer-Churn-Analysis" target="_blank" class="inline-block mt-4 text-green-400 font-medium hover:text-green-300 transition-all transform hover:translate-x-1">View on GitHub &rarr;</a>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </section>
+                
+                <!-- Education Section -->
+                <section id="education" class="mt-16 fade-in-section">
+                    <h2 class="text-xl font-bold uppercase tracking-widest text-white">Education</h2>
+                    <div class="mt-6 p-6 rounded-lg card">
+                        <h3 class="text-lg font-semibold text-white">University of Delhi</h3>
+                        <p class="gradient-text mt-1 text-sm font-medium">2020 - 2023</p>
+                        <p class="mt-2 text-gray-400">Bachelor of Commerce (Honours)</p>
+                    </div>
+                </section>
+
+                <!-- Certifications Section -->
+                <section id="certifications" class="mt-16 fade-in-section">
+                    <h2 class="text-xl font-bold uppercase tracking-widest text-white">Certifications</h2>
+                    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="card rounded-lg p-6 fade-in-section" data-delay="0">
+                            <h3 class="text-lg font-semibold text-white">Data Driven Decision Making</h3>
+                            <p class="mt-1 gradient-text text-sm font-medium">PwC (via Coursera)</p>
+                            <a href="https://www.coursera.org/account/accomplishments/verify/HHKDCBG43RWZ" target="_blank" class="inline-block mt-4 text-green-400 font-medium hover:text-green-300 transition-all transform hover:translate-x-1">View Credential &rarr;</a>
+                        </div>
+                        <div class="card rounded-lg p-6 fade-in-section" data-delay="100">
+                            <h3 class="text-lg font-semibold text-white">Power BI Fundamentals</h3>
+                            <p class="mt-1 gradient-text text-sm font-medium">Datacamp</p>
+                            <a href="https://www.datacamp.com/completed/statement-of-accomplishment/track/ce89dd258dfb1fc452daee6e140ae69458c572c8" target="_blank" class="inline-block mt-4 text-green-400 font-medium hover:text-green-300 transition-all transform hover:translate-x-1">View Credential &rarr;</a>
+                        </div>
+                        <div class="card rounded-lg p-6 fade-in-section" data-delay="200">
+                            <h3 class="text-lg font-semibold text-white">Excel Fundamentals</h3>
+                            <p class="mt-1 gradient-text text-sm font-medium">Datacamp</p>
+                            <a href="https://www.datacamp.com/completed/statement-of-accomplishment/track/e642b884ff7104088422cdffc4b83a10d8717b56" target="_blank" class="inline-block mt-4 text-green-400 font-medium hover:text-green-300 transition-all transform hover:translate-x-1">View Credential &rarr;</a>
+                        </div>
+                        <div class="card rounded-lg p-6 fade-in-section" data-delay="300">
+                            <h3 class="text-lg font-semibold text-white">GitHub Foundations</h3>
+                            <p class="mt-1 gradient-text text-sm font-medium">Datacamp</p>
+                            <a href="https://www.datacamp.com/completed/statement-of-accomplishment/track/d8110bf965c6b6543c4b996bfb6e506ea8bd904e" target="_blank" class="inline-block mt-4 text-green-400 font-medium hover:text-green-300 transition-all transform hover:translate-x-1">View Credential &rarr;</a>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Contact Section -->
+                <section id="contact" class="mt-16 text-center fade-in-section">
+                    <h2 class="text-xl font-bold uppercase tracking-widest text-white">Get In Touch</h2>
+                    <p class="mt-4 max-w-lg mx-auto">
+                        I'm currently seeking new opportunities and would love to chat about how my data skills can help your team. Feel free to reach out!
+                    </p>
+                    <div class="mt-6">
+                        <a href="mailto:aditya.sejwal.official@gmail.com" class="btn-primary rounded-md px-6 py-3 text-lg">Say Hello</a>
+                    </div>
+                </section>
+                
+                <!-- Footer -->
+                <footer class="text-center mt-16 pb-12 fade-in-section">
+                    <p class="text-gray-500 text-sm">
+                        &copy; 2025 Aditya Sejwal. All rights reserved.
+                    </p>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript for All Effects -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. Typing Effect ---
+            const typingText = document.getElementById('typing-text');
+            const roles = ["Data Analyst", "SQL Expert", "Problem Solver"];
+            let roleIndex = 0;
+            let charIndex = 0;
+            let isDeleting = false;
+
+            function type() {
+                // Check if typingText element exists
+                if (!typingText) {
+                    console.error("Typing text element not found.");
+                    return;
+                }
+                const currentRole = roles[roleIndex];
+                if (isDeleting) {
+                    typingText.textContent = currentRole.substring(0, charIndex - 1);
+                    charIndex--;
+                    if (charIndex === 0) {
+                        isDeleting = false;
+                        roleIndex = (roleIndex + 1) % roles.length;
+                    }
+                } else {
+                    typingText.textContent = currentRole.substring(0, charIndex + 1);
+                    charIndex++;
+                    if (charIndex === currentRole.length) {
+                        setTimeout(() => { isDeleting = true; }, 2000);
+                    }
+                }
+                const typeSpeed = isDeleting ? 75 : 150;
+                setTimeout(type, typeSpeed);
+            }
+            // Only start if the element exists
+            if (typingText) {
+                setTimeout(type, 1000);
+            }
+
+
+            // --- 2. Cursor Light Effect ---
+            const cursorLight = document.getElementById('cursor-light');
+            if (cursorLight) { // Check if element exists
+                window.addEventListener('mousemove', (e) => {
+                    cursorLight.style.left = `${e.clientX}px`;
+                    cursorLight.style.top = `${e.clientY}px`;
+                });
+            } else {
+                console.error("Cursor light element not found.");
+            }
+
+
+            // --- 3. Scroll Fade-in & Stagger Effect ---
+            const sections = document.querySelectorAll('.fade-in-section');
+            if (sections.length > 0) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            // Apply stagger delay if children have data-delay
+                            entry.target.querySelectorAll('.fade-in-section[data-delay]').forEach((child, index) => {
+                                const delay = child.getAttribute('data-delay') || (index * 100);
+                                child.style.transitionDelay = `${delay}ms`;
+                            });
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                sections.forEach(section => {
+                    observer.observe(section);
+                    // Observe children with data-delay directly for staggering
+                    section.querySelectorAll('.fade-in-section[data-delay]').forEach(child => {
+                        observer.observe(child);
+                    });
+                });
+            } else {
+                console.warn("No fade-in sections found.");
+            }
+
+            
+            // --- 4. Active Nav "Scroll Spy" (with fix) ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            if (navLinks.length > 0) {
+                const navMap = new Map();
+                navLinks.forEach(link => {
+                    const section = document.querySelector(link.getAttribute('href'));
+                    if (section) { // Add check to ensure section exists
+                        navMap.set(section, link);
+                    } else {
+                        console.warn(`Scroll spy target not found for link: ${link.getAttribute('href')}`);
+                    }
+                });
+
+                if (navMap.size > 0) {
+                    const scrollSpyObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            const link = navMap.get(entry.target);
+                            if (link) { 
+                                if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                                    navLinks.forEach(l => l.classList.remove('active'));
+                                    link.classList.add('active');
+                                } else if (!entry.isIntersecting) {
+                                    link.classList.remove('active');
+                                }
+                            }
+                        });
+                    }, { 
+                        threshold: 0.5, // 50% of the section must be visible
+                        rootMargin: "-50% 0px -50% 0px" // Only trigger for element in middle of screen
+                    });
+
+                    // ***THIS IS THE FIX from last time***
+                    // Instead of querying all sections, just observe the ones we have links for.
+                    navLinks.forEach(link => {
+                        const section = document.querySelector(link.getAttribute('href'));
+                        if (section) {
+                            scrollSpyObserver.observe(section);
+                        }
+                    });
+                }
+            } else {
+                console.warn("No nav links found for scroll spy.");
+            }
+
         });
     </script>
 </body>
